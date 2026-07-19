@@ -1,0 +1,228 @@
+1. MAE (Mean Absolute Error)
+
+MAE dihitung dari data test setelah model selesai dilatih menggunakan data train.
+Anggap: Data dari 2024 - 2026 (Saat ini ada 800 - 900 hari/data)
+Anggap Data 900 
+LSTM menggunakan sequence 60 hari sebagai input awal.
+Train ≈ 80% = 650 hari
+Test  ≈ 20% = 150 hari
+
+Contoh Sederhana:
+Misal:
+
+Harga Bitcoin Aktual: Rp. 1.000.000.000
+Prediksi LSTM       : Rp. 920.000.000
+Maka Error          : Rp. 80.000.000
+Rumus: 
+MAE = Σ|Aktual − Prediksi| / n
+
+Dan MAE akan didapatkan ketika semua data TEST dihitung satu2 sampai 150 dan jika hasil menunjukan 
+misal Rp 12.000.000.000 / 150 = 80.000.000
+Maka didapat MAE = Rp 80.000.000
+
+Interpretasi:
+Rata-rata prediksi LSTM meleset sekitar Rp 80 juta dari harga Bitcoin sebenarnya.
+
+Note: Semakin kecil nilai MAE semakin Baik
+  
+
+2. RMSE (Root Mean Squared Error)
+Perhitungan ini adalah contoh hasil perhitungan akan bergantung pada data test dan train
+| Hari | Harga Aktual     | Prediksi         | Error          |
+| ---- | ---------------- | ---------------- | -------------- |
+| 1    | Rp 1.000.000.000 | Rp 920.000.000   | Rp 80.000.000  |
+| 2    | Rp 1.100.000.000 | Rp 1.020.000.000 | Rp 80.000.000  |
+| 3    | Rp 900.000.000   | Rp 820.000.000   | Rp 80.000.000  |
+| 4    | Rp 1.200.000.000 | Rp 1.120.000.000 | Rp 80.000.000  |
+| 5    | Rp 1.050.000.000 | Rp 850.000.000   | Rp 200.000.000 |
+
+Rumus:
+RMSE = √(Σ(Aktual − Prediksi)² / n)
+
+Perhitungan:
+RMSE =
+√((80² + 80² + 80² + 80² + 200²) / 5)
+
+=
+√((6.400 + 6.400 + 6.400 + 6.400 + 40.000) / 5)
+
+=
+√13.120
+
+≈ 114,5
+
+RMSE ≈ Rp100 juta
+
+Interpretasi:
+RMSE sebesar Rp100juta menunjukkan bahwa terdapat beberapa prediksi yang memiliki kesalahan cukup besar sehingga nilai RMSE menjadi lebih tinggi dibandingkan MAE.
+
+Kesimpulan:
+Semakin kecil nilai RMSE maka semakin baik performa model.
+RMSE sangat berguna untuk mengetahui apakah terdapat prediksi yang memiliki kesalahan besar (outlier) pada model.
+
+
+3. R² (Coefficient of Determination)
+Hasil Train 
+R² = 0,8750 atau 87,50%
+
+Perhitungan:
+R² digunakan untuk mengukur seberapa baik model mampu mengikuti pola pergerakan harga Bitcoin.
+Nilai R² berada pada rentang:
+0 ≤ R² ≤ 1
+
+NOTED:  ==== INI SANGAT PENTING Untuk mengetahui seberapa baik model memprediksi ====
+
+Interpretasi Nilai: 
+
+Nilai R²	Interpretasi
+0,00	Sangat Buruk
+0,50	Cukup
+0,70	Baik
+0,80	Sangat Baik
+> 0,90	Sangat Kuat 
+
+
+Interpretasi Hasil
+R² = 0,8750
+
+Artinya:
+Model mampu menjelaskan sekitar 87,5% variasi atau perubahan pergerakan harga Bitcoin pada data pengujian.
+Semakin mendekati 1, maka prediksi model semakin mendekati pola data aktual.
+
+Kesimpulan:
+Nilai R² sebesar 0,8750 menunjukkan bahwa model memiliki kemampuan yang baik dalam mengikuti pola pergerakan harga Bitcoin dan menghasilkan prediksi yang mendekati data aktual.
+
+
+4. MAPE (Mean Absolute Percentage Error)
+
+Hasil Train
+MAPE = 5%
+
+Perhitungan
+MAPE digunakan untuk mengetahui persentase rata-rata kesalahan prediksi model terhadap harga aktual.
+
+Rumus:
+MAPE = (Σ |(Aktual − Prediksi) / Aktual| / n) × 100%
+
+Contoh Perhitunga
+
+| Aktual           | Prediksi         | Error |
+| ---------------- | ---------------- | ----- |
+| Rp 1.000.000.000 | Rp 950.000.000   | 5%    |
+| Rp 1.100.000.000 | Rp 1.045.000.000 | 5%    |
+| Rp 900.000.000   | Rp 855.000.000   | 5%    |
+
+MAPE:
+(5% + 5% + 5%) / 3
+= 5%
+
+Interpretasi
+MAPE sebesar 5% berarti rata-rata hasil prediksi model hanya berbeda sekitar 5% dari harga Bitcoin aktual.
+
+Kesimpulan
+Semakin kecil nilai MAPE maka semakin baik performa model.
+MAPE sering digunakan karena lebih mudah dipahami dibanding MAE atau RMSE.
+
+5. MSE (Mean Squared Error)
+
+Hasil Train
+MSE = 10.000.000.000.000.000
+
+(Contoh Sederhana)
+
+Cara Perhitungan
+MSE menghitung rata-rata kuadrat dari seluruh error prediksi.
+
+Rumus:
+MSE = Σ(Aktual − Prediksi)² / n
+
+Contoh Sederhana
+
+Misalkan error:
+* Rp 80 juta
+* Rp 80 juta
+* Rp 80 juta
+* Rp 80 juta
+* Rp 200 juta
+
+Maka:
+MSE = (80² + 80² + 80² + 80² + 200²) / 5
+MSE = 13.120
+
+Interpretasi
+
+MSE digunakan untuk melihat seberapa besar kesalahan model setelah error dikuadratkan.
+Karena menggunakan kuadrat, nilai MSE biasanya sangat besar dan sulit diinterpretasikan secara langsung.
+
+6. Trend Accuracy
+
+Trend Accuracy digunakan untuk mengukur ketepatan model dalam memprediksi arah pergerakan harga, yaitu naik atau turun.
+
+Rumus:
+Trend Accuracy = jumlah prediksi arah yang benar / total data trend yang diuji × 100%
+
+Contoh:
+Jika harga aktual naik dan prediksi model juga naik, maka dihitung benar.
+Jika harga aktual turun tetapi prediksi model naik, maka dihitung salah.
+
+Trend Accuracy tidak mengukur seberapa dekat nilai prediksi dengan harga aktual. Metrik ini hanya mengukur apakah arah pergerakan prediksi sama dengan arah pergerakan aktual.
+
+
+
+
+*********************************************************************************************************************************************
+Kesimpulan:
+MSE jarang digunakan untuk interpretasi akhir karena satuannya menjadi Rupiah.
+Biasanya lebih mudah menggunakan RMSE karena sudah dikembalikan ke satuan Rupiah.
+
+| Metrik            | Fungsi                                                     |
+| ----------------- | ---------------------------------------------------------- |
+| MAE               | Rata-rata selisih absolut antara harga aktual dan prediksi |
+| MSE               | Rata-rata kuadrat error                                    |
+| RMSE              | Akar dari MSE, menunjukkan besar error dalam satuan harga  |
+| R²                | Mengukur seberapa baik model mengikuti nilai aktual harga  |
+| MAPE              | Persentase rata-rata error prediksi                        |
+| Trend Accuracy    | Pengukuran ketetapan dengan prediksi arah pergerakan harga |
+
+
+========================= Anggap ini Hasil Data yang Sudah Ditrain ========================
+Data dimuat: 896 baris (2024-01-01 – 2026-06-15)
+Forecast horizon: 1 hari ke depan
+LSTM sequence length: 60 hari
+
+1. Training Random Forest...
+Random Forest selesai — MAE: 2,514 | R²: 0.8780 | TrendAcc: 52.02%
+
+2. Training XGBoost...
+XGBoost selesai — MAE: 1,966 | R²: 0.9230 | TrendAcc: 49.71%
+
+3. Training LSTM sebagai model utama...
+LSTM selesai — MAE: 5,768 | R²: 0.4186 | TrendAcc: 52.17%
+
+RINGKASAN PERBANDINGAN:
+Model terbaik ditentukan berdasarkan Trend Accuracy.
+  LSTM            MAE=     5,768  R²=0.4186  MAPE=7.88%  TrendAcc=52.17% ← TERBAIK
+  Random Forest   MAE=     2,514  R²=0.8780  MAPE=3.43%  TrendAcc=52.02%
+  XGBoost         MAE=     1,966  R²=0.9230  MAPE=2.62%  TrendAcc=49.71%
+
+TRAINING SELESAI — Refresh halaman untuk melihat hasil.
+
+###########
+Kesimpulan:
+XGBoost      → terbaik untuk prediksi nilai harga
+LSTM         → terbaik untuk arah trend, tapi unggulnya sangat tipis
+RandomForest → hampir sama dengan LSTM di Trend Accuracy
+
+1. Kenapa XGBoost lebih bagus untuk prediksi harga?
+Karena XGBoost sangat kuat untuk data tabular dengan fitur teknikal seperti:
+Open, High, Low, Close, Volume,
+MA, EMA, RSI, MACD, Bollinger Band,
+Returns, Momentum, Volatility, dan lain-lain.
+
+2. Kenapa LSTM kalah di dalam prediksi nilai HARGA tapi unggul dalam prediksi TREND?
+Data hanya sebesar 896 baris -> Untuk LSTM, ini relatif kecil. LSTM biasanya butuh data panjang.
+Intinya LSTM membutuhkan data yang besar agar bisa lebih belajar agar model tidak akan melesat jauh prediksinya
+
+Kenapa unggul dalam prediksi TREND?
+Trend Accuracy menghitung seberapa sering model benar menebak arah harga naik atau turun, 
+bukan seberapa dekat nilai prediksi dengan harga aktual.

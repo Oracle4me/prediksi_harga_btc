@@ -1,0 +1,15 @@
+{
+    "model": "Simple RNN",
+    "MAE": 2194.1285,
+    "RMSE": 2895.2677,
+    "MSE": 8382575.3211,
+    "R2": 0.8,
+    "MAPE": 3.1154,
+    "best_params": {
+        "units": 64,
+        "dropout": 0.1,
+        "epochs": 120,
+        "batch_size": 16,
+        "learning_rate": 0.005
+    }
+}

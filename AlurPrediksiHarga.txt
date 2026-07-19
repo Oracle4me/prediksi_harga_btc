@@ -1,0 +1,81 @@
+Data Historis Bitcoin 2024 - 2026 (Yahoo Finance)
+                │
+                ▼
+        Preprocessing Data
+    ├─ Cek missing value
+    ├─ Pemilihan fitur (OHLCV)
+    ├─ Normalisasi data
+    └─ Split train & test
+                │
+                ▼
+        Feature Engineering
+    ├─ Moving Average
+    ├─ RSI
+    ├─ MACD
+    ├─ Bollinger Bands
+    └─ Lag Features
+                │
+                ▼
+       Training 4 Model
+    ├─ LSTM
+    ├─ Simple RNN
+    ├─ Random Forest
+    └─ XGBoost
+                │
+                ▼
+        Evaluasi Model
+    ├─ MAE
+    ├─ RMSE
+    ├─ MAPE
+    └─ R² Score
+                │
+                ▼
+      Pemilihan Model Terbaik
+      (R² Score Tertinggi)
+                │
+                ▼
+          Model LSTM
+                │
+                ▼
+      Prediksi Harga Besok
+                │
+                ▼
+      Confidence Interval
+      (Batas Atas & Bawah)
+                │
+                ▼
+             app.py
+    ├─ Load model terbaik
+    ├─ Generate prediksi
+    ├─ API /api/predict
+    ├─ API /api/metrics
+    └─ API /api/forecast
+                │
+                ▼
+      Dashboard Web Flask
+    ├─ Grafik aktual vs prediksi
+    ├─ Perbandingan model
+    ├─ Metrik evaluasi
+    └─ Prediksi harga BTC
+
+
+Versi Simple
+1. Pengambilan Data
+   ↓
+2. Preprocessing Data
+   ↓
+3. Feature Engineering
+   ↓
+4. Pelatihan Model
+   (LSTM, Simple RNN, Random Forest, XGBoost)
+   ↓
+5. Evaluasi Model
+   (MAE, RMSE, MAPE, R²)
+   ↓
+6. Pemilihan Model Terbaik
+   ↓
+7. Prediksi Harga Bitcoin
+   ↓
+8. Penyajian Hasil melalui Flask (app.py)
+   ↓
+9. Dashboard Visualisasi dan Monitoring

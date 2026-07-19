@@ -1,0 +1,4 @@
+config,units_1,units_2,dropout,learning_rate,batch_size,best_val_loss,raw_val_trend_accuracy,boosted_val_trend_accuracy,boost_strategy,boost_threshold,boost_magnitude,boost_alpha,boost_beta,boost_clip,boost_val_mae_after
+PriceBoostLSTM_64_32_do010_lr0007,64,32,0.1,0.0007,16,0.001574,56.5891,58.9147,raw,-0.0025,0.003,,,,1546.7739
+PriceBoostLSTM_96_48_do012_lr0005,96,48,0.12,0.0005,16,0.001794,55.814,58.9147,raw,0.0075,0.003,,,,1545.7768
+PriceBoostLSTM_128_64_do015_lr0003,128,64,0.15,0.0003,16,0.002021,58.1395,58.1395,raw,-0.0075,0.003,,,,1546.1567
