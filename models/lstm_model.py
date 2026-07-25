@@ -24,9 +24,7 @@ def set_seed(seed=42):
 
 
 def forecast_direction(y_actual, y_pred):
-    """
-    Prediksi hari ini dibandingkan dengan harga aktual sebelumnya.
-    """
+    # Prediksi hari ini dibandingkan dengan harga aktual sebelumnya.
     y_actual = np.array(y_actual).flatten()
     y_pred = np.array(y_pred).flatten()
 
@@ -613,7 +611,6 @@ def train_lstm(
             "boosted_val_trend_accuracy": round(float(boosted_val_trend_acc), 4),
 
             # Versi boost baru memakai strategy/threshold/magnitude.
-            # Key alpha/beta/clip dibuat optional agar tidak KeyError.
             "boost_strategy": boost_params.get("strategy"),
             "boost_threshold": boost_params.get("threshold"),
             "boost_magnitude": boost_params.get("magnitude"),

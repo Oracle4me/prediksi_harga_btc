@@ -465,6 +465,19 @@ main {
   color: var(--purple);
 }
 
+.forecast-tab.tab-actual:hover {
+    border-color: #4f8cff;
+    color: #4f8cff;
+    background: rgba(79,140,255,.15);
+}
+
+.forecast-tab.tab-actual.active {
+    background: #4f8cff;
+    border-color: #4f8cff;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(79,140,255,.25);
+}
+
 /* =========================
    7. Forecast Section
    ========================= */
@@ -531,19 +544,53 @@ main {
   margin-bottom: 1.5rem;
 }
 
-.forecast-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
+.forecast-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+}
+
+.forecast-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.forecast-tab {
+    padding: 5px 12px;
+    border: 1px solid var(--border, #1e2d4a);
+    border-radius: 8px;
+    background: rgba(255,255,255,.03);
+    color: var(--text-dim, #5a729a);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    transition: all .2s ease;
+}
+
+.forecast-tab:hover {
+    border-color: var(--purple, #a855f7);
+    color: var(--purple, #a855f7);
+    background: var(--purple-dim, rgba(168,85,247,.08));
+}
+
+.forecast-tab.active {
+    background: var(--purple, #a855f7);
+    border-color: var(--purple, #a855f7);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(168,85,247,.35);
 }
 
 .forecast-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
 }
 
 .f-badge {

@@ -144,33 +144,54 @@
         </div>
         <!-- End History & Prediksi Charts -->
 
-
         <!-- Forecast Section -->
         <div class="forecast-layout">
             <!-- Kiri: Grafik Forecast -->
             <div class="card forecast-card forecast-chart-card">
 
                 <div class="forecast-header">
+
                     <div class="card-title" style="margin-bottom:0">
                         <span class="dot dot-purple"></span>
-                        Prediksi Harga Bitcoin 1 Hari ke Depan (LSTM)
+                        Visualisasi Harga Bitcoin
                     </div>
 
-                    <div class="forecast-badges">
-                        <span class="f-badge f-badge-actual">Harga Aktual</span>
-                        <span class="f-badge f-badge-forecast">Prediksi LSTM</span>
-                        <span class="f-badge f-badge-ci">Confidence Interval ±4%</span>
+                    <div class="forecast-tabs">
+                        <button class="forecast-tab active" onclick="switchForecastTab('overlay',this)">
+                            Overlay
+                        </button>
+
+                        <button class="forecast-tab tab-actual" onclick="switchForecastTab('daily',this)">
+                            Aktual Harian
+                        </button>
+
+                        <button class="forecast-tab tab-actual" onclick="switchForecastTab('weekly',this)">
+                            Aktual Mingguan
+                        </button>
+
+                        <button class="forecast-tab" onclick="switchForecastTab('forecast',this)">
+                            Forecast 30 hari
+                        </button>
                     </div>
+
+                </div>
+
+                <div class="forecast-badges">
+                    <span class="f-badge f-badge-actual">Harga Aktual</span>
+                    <span class="f-badge f-badge-forecast">Forecast LSTM</span>
+                    <span class="f-badge f-badge-ci">Confidence Interval ±2% - ±4%</span>
                 </div>
 
                 <div id="forecastWrap">
+
                     <div class="placeholder" id="forecastPlaceholder">
-                        <span>Jalankan training untuk melihat prediksi LSTM</span>
+                        <span>Jalankan training untuk melihat visualisasi.</span>
                     </div>
 
                     <div class="chart-wrap" id="forecastChartWrap" style="display:none;">
                         <canvas id="chartForecast" height="140"></canvas>
                     </div>
+
                 </div>
 
             </div>
@@ -181,17 +202,17 @@
                 <div class="forecast-stats" id="forecastStats" style="display:none;">
 
                     <div class="fstat">
-                        <div class="fstat-label">Prediksi Harga Besok</div>
+                        <div class="fstat-label">Prediksi Harga Hari ke-30</div>
                         <div class="fstat-val purple" id="fstatEnd">—</div>
                     </div>
 
                     <div class="fstat">
-                        <div class="fstat-label">Batas Atas Confidence Interval</div>
+                        <div class="fstat-label">Harga Tertinggi (30 Hari)</div>
                         <div class="fstat-val up" id="fstatPeak">—</div>
                     </div>
 
                     <div class="fstat">
-                        <div class="fstat-label">Batas Bawah Confidence Interval</div>
+                        <div class="fstat-label">Harga Terendah (30 Hari)</div>
                         <div class="fstat-val down" id="fstatLow">—</div>
                     </div>
 
@@ -218,8 +239,10 @@
                     <div class="forecast-warning-content">
                         <div class="forecast-warning-title">Disclaimer Prediksi</div>
                         <div class="forecast-warning-text">
-                            Prediksi ini berbasis data historis,
-                            bukan saran investasi. Cryptocurrency memiliki volatilitas tinggi.
+                            Prediksi ini berbasis data historis, bukan saran investasi.
+                            Semakin jauh horizon prediksi (mendekati hari ke-30), tingkat
+                            ketidakpastian semakin besar akibat sifat prediksi berantai (recursive).
+                            Cryptocurrency memiliki volatilitas tinggi.
                         </div>
                     </div>
                 </div>

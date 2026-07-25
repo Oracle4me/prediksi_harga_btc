@@ -262,25 +262,50 @@ def all_predictions():
 
     return jsonify(results)
 
-
-@app.route("/api/btc_history")
-def btc_history():
+# Harian
+@app.route("/api/btc_history_daily")
+def btc_history_daily():
     from utils.preprocessing import load_or_fetch_data
 
     df = load_or_fetch_data(start="2024-01-01")
 
-    if df is None:
+    if df is None or df.empty:
         return jsonify({"error": "Data tidak tersedia"}), 404
 
-    df_2024 = df[df.index >= "2024-01-01"]
-    df_weekly = df_2024["Close"].resample("W").last().dropna()
+    df = df[df.index >= "2024-01-01"]
 
     return jsonify({
-        "dates": df_weekly.index.strftime("%Y-%m-%d").tolist(),
-        "prices": df_weekly.round(2).tolist()
+        "type": "daily",
+        "dates": df.index.strftime("%Y-%m-%d").tolist(),
+        "prices": df["Close"].round(2).tolist()
     })
 
+# Mingguan
+@app.route("/api/btc_history_weekly")
+def btc_history_weekly():
+    from utils.preprocessing import load_or_fetch_data
 
+    df = load_or_fetch_data(start="2024-01-01")
+
+    if df is None or df.empty:
+        return jsonify({"error": "Data tidak tersedia"}), 404
+
+    df = df[df.index >= "2024-01-01"]
+
+    weekly = df["Close"].resample("W").last().dropna()
+
+    return jsonify({
+        "type": "weekly",
+        "dates": weekly.index.strftime("%Y-%m-%d").tolist(),
+        "prices": weekly.round(2).tolist()
+    })
+
+# Overlay Mingguan
+@app.route("/api/btc_history")
+def btc_history():
+    return btc_history_weekly()
+
+# Forecast 30 hari (recursive)
 @app.route("/api/btc_forecast")
 def btc_forecast():
     import tensorflow as tf
@@ -297,6 +322,8 @@ def btc_forecast():
 
     if df_raw is None or df_raw.empty:
         return jsonify({"error": "Data tidak tersedia"}), 404
+
+    N_FORECAST_DAYS = 30
 
     try:
         feature_cols = get_feature_columns()
@@ -318,77 +345,128 @@ def btc_forecast():
                 "solution": "Hapus folder models/hasil_train atau jalankan ulang python train_all.py."
             }), 500
 
-        df_ind = add_technical_indicators(df_raw.copy())
-
-        if len(df_ind) < seq_len:
-            return jsonify({"error": "Data historis tidak cukup untuk sequence LSTM."}), 500
-
-        latest_features = df_ind[feature_cols].tail(seq_len).values
-        latest_scaled = scaler.transform(latest_features)
-
-        x_input = latest_scaled.reshape(1, seq_len, len(feature_cols))
-
-        pred_scaled = model.predict(x_input, verbose=0)[0][0]
-
-        pred_price = close_scaler.inverse_transform(
-            np.array([[pred_scaled]])
-        )[0][0]
-
-        pred_price = float(pred_price)
+        # Working copy data OHLCV, akan bertambah baris sintetis setiap hari
+        # untuk memprediksi hari berikutnya (recursive multi-step forecasting).
+        df_work = df_raw.copy()
 
         last_actual_date = df_raw.index[-1]
         last_actual_price = float(df_raw["Close"].iloc[-1])
 
-        future_date = last_actual_date + pd.Timedelta(days=1)
-        change_pct = ((pred_price - last_actual_price) / last_actual_price) * 100
+        forecast_prices = []
+        forecast_dates = []
 
-        ci_upper = pred_price * 1.04
-        ci_lower = pred_price * 0.96
+        current_date = last_actual_date
+
+        for day in range(N_FORECAST_DAYS):
+            df_ind = add_technical_indicators(df_work.copy())
+
+            if len(df_ind) < seq_len:
+                return jsonify({"error": "Data historis tidak cukup untuk sequence LSTM."}), 500
+
+            latest_features = df_ind[feature_cols].tail(seq_len).values
+            latest_scaled = scaler.transform(latest_features)
+
+            x_input = latest_scaled.reshape(1, seq_len, len(feature_cols))
+
+            pred_scaled = model.predict(x_input, verbose=0)[0][0]
+
+            pred_price = close_scaler.inverse_transform(
+                np.array([[pred_scaled]])
+            )[0][0]
+
+            pred_price = float(pred_price)
+
+            current_date = current_date + pd.Timedelta(days=1)
+
+            forecast_prices.append(pred_price)
+            forecast_dates.append(current_date)
+
+            # Bangun baris OHLCV sintetis untuk hari prediksi ini, agar technical indicators (MA, RSI, dst) bisa dihitung ulang untuk prediksi hari berikutnya.
+            prev_close = df_work["Close"].iloc[-1]
+
+            synthetic_open = prev_close
+            synthetic_close = pred_price
+            synthetic_high = max(synthetic_open, synthetic_close) * 1.001
+            synthetic_low = min(synthetic_open, synthetic_close) * 0.999
+            synthetic_volume = (
+                df_work["Volume"].tail(7).mean()
+                if len(df_work) >= 7
+                else df_work["Volume"].iloc[-1]
+            )
+
+            new_row = pd.DataFrame({
+                "Open": [synthetic_open],
+                "High": [synthetic_high],
+                "Low": [synthetic_low],
+                "Close": [synthetic_close],
+                "Volume": [synthetic_volume]
+            }, index=[current_date])
+            new_row.index.name = "Date"
+
+            df_work = pd.concat([df_work, new_row])
+
+        # Confidence interval melebar seiring bertambah jauh horizon
+        # Tingkat kewajaran: makin jauh hari, makin tidak pasti.
+        ci_upper = []
+        ci_lower = []
+
+        for i, price in enumerate(forecast_prices, start=1):
+            band = 0.02 + (0.02 * (i / N_FORECAST_DAYS))  # dari ~2% ke ~4%
+            ci_upper.append(round(price * (1 + band), 2))
+            ci_lower.append(round(price * (1 - band), 2))
+
+        forecast_end = forecast_prices[-1]
+        forecast_peak = max(forecast_prices)
+        forecast_low = min(forecast_prices)
+
+        change_pct = ((forecast_end - last_actual_price) / last_actual_price) * 100
 
         if change_pct >= 2.5:
             trend = "Strong Bullish"
             trend_color = "up"
             trend_icon = "bi-rocket-takeoff-fill"
-            note = f"Model memprediksi kenaikan kuat sebesar {change_pct:.2f}% untuk hari berikutnya."
+            note = f"Model memprediksi kenaikan kuat sebesar {change_pct:.2f}% dalam {N_FORECAST_DAYS} hari ke depan."
 
         elif change_pct >= 0.5:
             trend = "Bullish"
             trend_color = "up"
             trend_icon = "bi-arrow-up-circle-fill"
-            note = f"Model memprediksi kenaikan sebesar {change_pct:.2f}% untuk hari berikutnya."
+            note = f"Model memprediksi kenaikan sebesar {change_pct:.2f}% dalam {N_FORECAST_DAYS} hari ke depan."
 
         elif change_pct <= -2.5:
             trend = "Strong Bearish"
             trend_color = "down"
             trend_icon = "bi-exclamation-octagon-fill"
-            note = f"Model memprediksi penurunan kuat sebesar {change_pct:.2f}% untuk hari berikutnya."
+            note = f"Model memprediksi penurunan kuat sebesar {change_pct:.2f}% dalam {N_FORECAST_DAYS} hari ke depan."
 
         elif change_pct <= -0.5:
             trend = "Bearish"
             trend_color = "down"
             trend_icon = "bi-arrow-down-circle-fill"
-            note = f"Model memprediksi penurunan sebesar {change_pct:.2f}% untuk hari berikutnya."
+            note = f"Model memprediksi penurunan sebesar {change_pct:.2f}% dalam {N_FORECAST_DAYS} hari ke depan."
 
         else:
             trend = "Sideways"
             trend_color = "neutral"
             trend_icon = "bi-dash-circle-fill"
-            note = f"Model memprediksi perubahan harga sebesar {change_pct:.2f}% untuk hari berikutnya."
+            note = f"Model memprediksi perubahan harga sebesar {change_pct:.2f}% dalam {N_FORECAST_DAYS} hari ke depan."
 
         return jsonify({
-            "dates": [future_date.strftime("%Y-%m-%d")],
-            "forecast": [round(float(pred_price), 2)],
-            "ci_upper": [round(float(ci_upper), 2)],
-            "ci_lower": [round(float(ci_lower), 2)],
+            "dates": [d.strftime("%Y-%m-%d") for d in forecast_dates],
+            "forecast": [round(float(p), 2) for p in forecast_prices],
+            "ci_upper": ci_upper,
+            "ci_lower": ci_lower,
             "last_actual_date": last_actual_date.strftime("%Y-%m-%d"),
             "last_actual_price": round(last_actual_price, 2),
-            "forecast_end": round(float(pred_price), 2),
+            "forecast_end": round(float(forecast_end), 2),
+            "forecast_peak": round(float(forecast_peak), 2),
+            "forecast_low": round(float(forecast_low), 2),
             "change_pct": round(float(change_pct), 2),
             "trend": trend,
             "trend_color": trend_color,
             "trend_icon": trend_icon,
             "note": note,
-            "method_note": "Forecast dilakukan untuk 1 hari ke depan menggunakan sequence historis terakhir oleh model LSTM."
+            "method_note": f"Forecast dilakukan untuk {N_FORECAST_DAYS} hari ke depan secara recursive (day-by-day) menggunakan model LSTM one-step-ahead."
         })
 
     except Exception as e:
@@ -396,7 +474,6 @@ def btc_forecast():
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
-
 
 @app.route("/api/idr_rate")
 def idr_rate():

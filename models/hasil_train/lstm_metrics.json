@@ -1,11 +1,11 @@
 {
     "model": "LSTM",
-    "MAE": 1298.6068,
-    "RMSE": 1862.8993,
-    "MSE": 3470393.9202,
-    "R2": 0.9172,
-    "MAPE": 1.8594,
+    "MAE": 1264.3687,
+    "RMSE": 1818.4235,
+    "MSE": 3306664.1764,
+    "R2": 0.91,
+    "MAPE": 1.8224,
     "best_config": "PriceBoostLSTM_64_32_do010_lr0007",
-    "best_val_loss": 0.001574,
+    "best_val_loss": 0.00185,
     "epochs_limit": 120
 }

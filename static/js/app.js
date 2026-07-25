@@ -18,14 +18,37 @@ const COLORS = {
 };
 
 const MODEL_COLORS = {
-    'LSTM': COLORS.rf,
+    'LSTM': COLORS.lstm,
     'Simple RNN': COLORS.srnn,
-    'Random Forest': COLORS.lstm,
+    'Random Forest': COLORS.rf,
     'XGBoost': COLORS.xgb
 };
 
 let charts = {};
 let currentTab = 'lstm';
+let currentForecastTab = 'overlay';
+
+const FORECAST_ENDPOINTS = {
+    overlay: {
+        history: "/api/btc_history_daily",
+        forecast: "/api/btc_forecast"
+    },
+
+    forecast: {
+        history: null,
+        forecast: "/api/btc_forecast"
+    },
+
+    daily: {
+        history: "/api/btc_history_daily",
+        forecast: null
+    },
+
+    weekly: {
+        history: "/api/btc_history_weekly",
+        forecast: null
+    }
+};
 
 const FX_RATE = {
     usdToIdr: null,
@@ -258,9 +281,8 @@ async function loadHistory() {
     }
 }
 
-
-// Load LSTM Forecast
-async function loadForecast() {
+// Load forecast
+async function loadForecast(mode = currentForecastTab) {
     const placeholder = document.getElementById('forecastPlaceholder');
     const chartWrap = document.getElementById('forecastChartWrap');
 
@@ -268,45 +290,72 @@ async function loadForecast() {
 
     placeholder.innerHTML = `
         <div class="spinner"></div>
-        <span>Menghitung prediksi 1 hari ke depan…</span>
+        <span>Menghitung prediksi 30 hari ke depan…</span>
     `;
 
     placeholder.style.display = 'flex';
     chartWrap.style.display = 'none';
 
     try {
-        const [histRes, fcRes] = await Promise.all([
-            fetch('/api/btc_history'),
-            fetch('/api/btc_forecast')
-        ]);
+        const cfg = FORECAST_ENDPOINTS[mode];
 
-        if (!histRes.ok || !fcRes.ok) {
-            placeholder.innerHTML = '<span>Jalankan training terlebih dahulu</span>';
-            placeholder.style.display = 'flex';
-            chartWrap.style.display = 'none';
-            return;
+        let hist = null;
+        let fc = null;
+
+        if (cfg.history) {
+
+            const r = await fetch(cfg.history);
+
+            if (r.ok)
+                hist = await r.json();
+
         }
 
-        const hist = await histRes.json();
-        const fc = await fcRes.json();
+        if (cfg.forecast) {
 
-        if (fc.error) {
+            const r = await fetch(cfg.forecast);
+
+            if (r.ok)
+                fc = await r.json();
+        }
+
+        if (fc && fc.error) {
             placeholder.innerHTML = `<span>${fc.error}</span>`;
             placeholder.style.display = 'flex';
             chartWrap.style.display = 'none';
             return;
         }
 
-        if (!hist.dates || !hist.prices || !fc.dates || !fc.forecast) {
-            placeholder.innerHTML = '<span>Format data forecast tidak valid</span>';
-            placeholder.style.display = 'flex';
-            chartWrap.style.display = 'none';
-            return;
+        if (mode === "overlay") {
+
+            if (!hist || !fc) {
+                placeholder.innerHTML = '<span>Jalankan training terlebih dahulu</span>';
+                return;
+            }
+
+        }
+
+        if (mode === "forecast") {
+
+            if (!fc) {
+                placeholder.innerHTML = '<span>Forecast belum tersedia</span>';
+                return;
+            }
+
+        }
+
+        if (mode === "daily" || mode === "weekly") {
+
+            if (!hist) {
+                placeholder.innerHTML = '<span>Data historis belum tersedia</span>';
+                return;
+            }
+
         }
 
         const trendCard = document.getElementById('trendCard');
 
-        if (trendCard) {
+        if (trendCard && fc) {
             trendCard.className = `trend-card ${fc.trend_color || 'neutral'}`;
 
             const trendIcon = document.getElementById('trendIcon');
@@ -326,42 +375,12 @@ async function loadForecast() {
             }
 
             trendCard.style.display = 'flex';
+        } else if (trendCard) {
+            trendCard.style.display = 'none';
         }
 
         placeholder.style.display = 'none';
         chartWrap.style.display = 'block';
-
-        const nextDate = fc.dates[0];
-        const nextForecast = fc.forecast[0];
-        const nextUpper = fc.ci_upper[0];
-        const nextLower = fc.ci_lower[0];
-
-        const lastActualPrice = fc.last_actual_price;
-
-        const allDates = [...hist.dates, nextDate];
-
-        const actualSeries = [
-            ...hist.prices,
-            null
-        ];
-
-        const forecastSeries = [
-            ...Array(hist.dates.length - 1).fill(null),
-            hist.prices[hist.prices.length - 1],
-            nextForecast
-        ];
-
-        const ciUpper = [
-            ...Array(hist.dates.length - 1).fill(null),
-            hist.prices[hist.prices.length - 1],
-            nextUpper
-        ];
-
-        const ciLower = [
-            ...Array(hist.dates.length - 1).fill(null),
-            hist.prices[hist.prices.length - 1],
-            nextLower
-        ];
 
         destroyChart('chartForecast');
 
@@ -370,13 +389,200 @@ async function loadForecast() {
 
         const ctx = canvas.getContext('2d');
 
+        if (mode === "daily" || mode === "weekly") {
+
+            const forecastStats = document.getElementById('forecastStats');
+            if (forecastStats) {
+                forecastStats.style.display = 'none';
+            }
+
+            charts['chartForecast'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hist.dates,
+                    datasets: [
+                        {
+                            label: 'Harga Aktual',
+                            data: hist.prices,
+                            borderColor: COLORS.actual,
+                            backgroundColor: 'rgba(79,140,255,.05)',
+                            fill: true,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.35
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                boxWidth: 10
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    if (ctx.parsed.y === null) return null;
+                                    return ctx.dataset.label + ': ' + rupiah(ctx.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(30,45,74,.6)' },
+                            ticks: { maxTicksLimit: 12, maxRotation: 0 }
+                        },
+                        y: {
+                            grid: { color: 'rgba(30,45,74,.6)' },
+                            ticks: { callback: value => rupiah(value) }
+                        }
+                    },
+                    elements: {
+                        point: { radius: 0, hoverRadius: 5, hitRadius: 8 },
+                        line: { tension: 0.35 }
+                    }
+                }
+            });
+
+            return;
+        }
+
+        if (mode === "forecast") {
+
+            const ciUpper = fc.ci_upper;
+            const ciLower = fc.ci_lower;
+
+            charts['chartForecast'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: fc.dates,
+                    datasets: [
+                        {
+                            label: 'CI Upper',
+                            data: ciUpper,
+                            borderColor: 'transparent',
+                            backgroundColor: 'rgba(168,85,247,.12)',
+                            fill: '+1',
+                            pointRadius: 0,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'CI Lower',
+                            data: ciLower,
+                            borderColor: 'transparent',
+                            backgroundColor: 'rgba(168,85,247,.12)',
+                            fill: false,
+                            pointRadius: 0,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Prediksi LSTM 30 Hari ke Depan',
+                            data: fc.forecast,
+                            borderColor: COLORS.forecast,
+                            borderDash: [6, 4],
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            pointBackgroundColor: COLORS.forecast,
+                            pointBorderColor: COLORS.forecast,
+                            tension: 0.4,
+                            cubicInterpolationMode: "monotone",
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                boxWidth: 10,
+                                filter: item => !item.text.includes('CI')
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    if (ctx.parsed.y === null) return null;
+                                    return ctx.dataset.label + ': ' + rupiah(ctx.parsed.y);
+                                },
+                                afterLabel: ctx => {
+                                    if (ctx.datasetIndex === 2) {
+                                        return `Hari ${ctx.dataIndex + 1}/30`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(30,45,74,.6)' },
+                            ticks: { maxTicksLimit: 15, maxRotation: 0 }
+                        },
+                        y: {
+                            grid: { color: 'rgba(30,45,74,.6)' },
+                            ticks: { callback: value => rupiah(value) }
+                        }
+                    },
+                    elements: {
+                        point: { radius: 0, hoverRadius: 5, hitRadius: 8 },
+                        line: { tension: 0.4 }
+                    }
+                }
+            });
+
+            renderForecastStats(fc, fc.last_actual_price);
+            return;
+        }
+
+        const lastActualPrice = fc.last_actual_price;
+
+        const allDates = [...hist.dates, ...fc.dates];
+
+        const actualSeries = [
+            ...hist.prices,
+            ...Array(30).fill(null)
+        ];
+
+        const forecastSeries = [
+            ...Array(hist.dates.length - 1).fill(null),
+            hist.prices[hist.prices.length - 1],
+            ...fc.forecast
+        ];
+
+        const ciUpper = [
+            ...Array(hist.dates.length - 1).fill(null),
+            hist.prices[hist.prices.length - 1],
+            ...fc.ci_upper
+        ];
+
+        const ciLower = [
+            ...Array(hist.dates.length - 1).fill(null),
+            hist.prices[hist.prices.length - 1],
+            ...fc.ci_lower
+        ];
+
         charts['chartForecast'] = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: allDates,
                 datasets: [
                     {
-                        label: 'CI Upper (+4%)',
+                        label: 'CI Upper',
                         data: ciUpper,
                         borderColor: 'transparent',
                         backgroundColor: 'rgba(168,85,247,.12)',
@@ -385,7 +591,7 @@ async function loadForecast() {
                         tension: 0.4
                     },
                     {
-                        label: 'CI Lower (-4%)',
+                        label: 'CI Lower',
                         data: ciLower,
                         borderColor: 'transparent',
                         backgroundColor: 'rgba(168,85,247,.12)',
@@ -404,15 +610,19 @@ async function loadForecast() {
                         tension: 0.35
                     },
                     {
-                        label: 'Prediksi LSTM 1 Hari ke Depan',
+                        label: 'Prediksi LSTM 30 Hari ke Depan',
                         data: forecastSeries,
                         borderColor: COLORS.forecast,
-                        borderDash: [5, 3],
-                        borderWidth: 2.5,
-                        pointRadius: 3,
+                        borderDash: [6, 4],
+                        borderWidth: 3,
+                        pointRadius: 0,
                         pointHoverRadius: 5,
-                        tension: 0.25,
-                        fill: false
+                        pointBackgroundColor: COLORS.forecast,
+                        pointBorderColor: COLORS.forecast,
+                        tension: 0.4,
+                        cubicInterpolationMode: "monotone",
+                        fill: false,
+                        spanGaps: true
                     }
                 ]
             },
@@ -435,6 +645,13 @@ async function loadForecast() {
                             label: ctx => {
                                 if (ctx.parsed.y === null) return null;
                                 return ctx.dataset.label + ': ' + rupiah(ctx.parsed.y);
+                            },
+                            afterLabel: ctx => {
+                                if (ctx.datasetIndex === 3 && ctx.dataIndex >= hist.dates.length) {
+                                    const dayNum = ctx.dataIndex - hist.dates.length + 1;
+                                    return `Hari ${dayNum}/30`;
+                                }
+                                return '';
                             }
                         }
                     }
@@ -445,7 +662,7 @@ async function loadForecast() {
                             color: 'rgba(30,45,74,.6)'
                         },
                         ticks: {
-                            maxTicksLimit: 10,
+                            maxTicksLimit: 15,
                             maxRotation: 0
                         }
                     },
@@ -460,50 +677,18 @@ async function loadForecast() {
                 },
                 elements: {
                     point: {
+                        radius: 0,
+                        hoverRadius: 5,
                         hitRadius: 8
                     },
                     line: {
-                        tension: 0.35
+                        tension: 0.4
                     }
                 }
             }
         });
 
-        const change = lastActualPrice
-            ? (((nextForecast - lastActualPrice) / lastActualPrice) * 100).toFixed(2)
-            : '0.00';
-
-        const isUp = nextForecast >= lastActualPrice;
-
-        const fstatEnd = document.getElementById('fstatEnd');
-        const fstatPeak = document.getElementById('fstatPeak');
-        const fstatLow = document.getElementById('fstatLow');
-        const fstatChg = document.getElementById('fstatChg');
-
-        if (fstatEnd) {
-            fstatEnd.textContent = rupiah(nextForecast);
-            fstatEnd.className = 'fstat-val ' + (isUp ? 'up' : 'down');
-        }
-
-        if (fstatPeak) {
-            fstatPeak.textContent = rupiah(nextUpper);
-            fstatPeak.className = 'fstat-val up';
-        }
-
-        if (fstatLow) {
-            fstatLow.textContent = rupiah(nextLower);
-            fstatLow.className = 'fstat-val down';
-        }
-
-        if (fstatChg) {
-            fstatChg.textContent = (isUp ? '+' : '') + change + '%';
-            fstatChg.className = 'fstat-val ' + (isUp ? 'up' : 'down');
-        }
-
-        const forecastStats = document.getElementById('forecastStats');
-        if (forecastStats) {
-            forecastStats.style.display = 'grid';
-        }
+        renderForecastStats(fc, lastActualPrice);
 
     } catch (e) {
         placeholder.innerHTML = '<span>Training diperlukan sebelum prediksi</span>';
@@ -511,6 +696,42 @@ async function loadForecast() {
         chartWrap.style.display = 'none';
 
         console.warn('Forecast error:', e);
+    }
+}
+
+// Render forecast stats
+function renderForecastStats(fc, lastActualPrice) {
+    const isUp = fc.forecast_end >= lastActualPrice;
+    const change = fc.change_pct;
+
+    const fstatEnd = document.getElementById('fstatEnd');
+    const fstatPeak = document.getElementById('fstatPeak');
+    const fstatLow = document.getElementById('fstatLow');
+    const fstatChg = document.getElementById('fstatChg');
+
+    if (fstatEnd) {
+        fstatEnd.textContent = rupiah(fc.forecast_end);
+        fstatEnd.className = 'fstat-val ' + (isUp ? 'up' : 'down');
+    }
+
+    if (fstatPeak) {
+        fstatPeak.textContent = rupiah(fc.forecast_peak);
+        fstatPeak.className = 'fstat-val up';
+    }
+
+    if (fstatLow) {
+        fstatLow.textContent = rupiah(fc.forecast_low);
+        fstatLow.className = 'fstat-val down';
+    }
+
+    if (fstatChg) {
+        fstatChg.textContent = (isUp ? '+' : '') + change + '%';
+        fstatChg.className = 'fstat-val ' + (isUp ? 'up' : 'down');
+    }
+
+    const forecastStats = document.getElementById('forecastStats');
+    if (forecastStats) {
+        forecastStats.style.display = 'grid';
     }
 }
 
@@ -689,6 +910,19 @@ async function switchTab(tab, btn) {
     }
 }
 
+async function switchForecastTab(tab, btn) {
+
+    currentForecastTab = tab;
+
+    document.querySelectorAll(".forecast-tab")
+        .forEach(b => b.classList.remove("active"));
+
+    if (btn) btn.classList.add("active");
+
+    loadForecast(tab);
+
+}
+
 async function loadPred(model) {
     try {
         const r = await fetch('/api/predictions/' + model);
@@ -711,8 +945,7 @@ async function loadPred(model) {
             lstm: COLORS.lstm,
             rnn: COLORS.srnn,
             rf: COLORS.rf,
-            xgb: COLORS.xgb,
-            rnn: COLORS.srnn
+            xgb: COLORS.xgb
         };
 
         const nameMap = {
